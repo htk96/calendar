@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>팀 캘린더</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+    <style>
+        .calendar-container {
+            background: linear-gradient(135deg, #f6f9fc 0%, #ffffff 100%);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .calendar-header {
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            border-radius: 20px 20px 0 0;
+        }
+
+        .calendar-day {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            min-height: 150px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .calendar-day:hover {
+            transform: translateY(-2px);
+            border-color: #4F46E5;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+        }
+
+        .event-chip {
+            position: relative;
+            margin: 2px 0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-radius: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+
+        .event-chip:hover {
+            transform: scale(1.02);
+            filter: brightness(1.1);
+        }
+
+        .event-chip[data-assignee="Shim"] {
+            background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
+            color: white;
+        }
+
+        .event-chip[data-assignee="Heo"] {
+            background: linear-gradient(135deg, #2563EB 0%, #3B82F6 100%);
+            color: white;
+        }
+
+        .event-chip[data-assignee="Park"] {
+            background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+            color: white;
+        }
+
+        .event-chip[data-assignee="Lee"] {
+            background: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 100%);
+            color: white;
+        }
+
+        .event-chip[data-assignee="Hong"] {
+            background: linear-gradient(135deg, #EA580C 0%, #F97316 100%);
+            color: white;
+        }
+
+        .event-chip .status-badge {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: 8px;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal {
+            backdrop-filter: blur(8px);
+            background-color: rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .modal-content {
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+
+        .modal.show .modal-content {
+            transform: translateY(0);
+        }
+
+        .custom-input {
+            transition: all 0.3s ease;
+            border: 2px solid #E5E7EB;
+        }
+
+        .custom-input:focus {
+            border-color: #4F46E5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .custom-button {
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            transition: all 0.3s ease;
+        }
+
+        .custom-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+        }
+
+        .today {
+            background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+        }
+
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4F46E5;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: 8px;
+        }
+
+        .status-ongoing {
+            background-color: #93C5FD;
+            color: #1E40AF;
+        }
+
+        .status-planned {
+            background-color: #A7F3D0;
+            color: #065F46;
+        }
+
+        .status-completed {
+            background-color: #D1D5DB;
+            color: #374151;
+        }
+
+        .calendar-day {
+            cursor: pointer;
+        }
+        
+        #yearSelect, #monthSelect {
+            color: white;
+            background: transparent;
+            border: none;
+            font-size: 1.1rem;
+            padding: 0.2rem;
+            margin-right: 0.5rem;
+        }
+
+        #yearSelect option, #monthSelect option {
+            color: black;
+            background: white;
+        }
+
+        .banner {
+            background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .banner-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .banner-logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(4px);
+        }
+
+        .banner-divider {
+            width: 2px;
+            height: 2rem;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .banner-text {
+            font-size: 1.25rem;
+            color: white;
+            font-weight: 500;
+        }
+
+        /* 서명 스타일 */
+        .signature-select {
+            position: relative;
+            display: flex;
+            gap: 1rem;
+            padding: 0.5rem;
+            background: #f8fafc;
+            border-radius: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .signature-option {
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            font-family: 'Dancing Script', cursive;
+            font-size: 1.25rem;
+        }
+
+        .signature-option input {
+            display: none;
+        }
+
+        .signature-option.selected {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .signature-shim {
+            color: #DC2626;
+            background: rgba(220, 38, 38, 0.1);
+        }
+        .signature-shim.selected {
+            background: rgba(220, 38, 38, 0.2);
+        }
+
+        .signature-heo {
+            color: #2563EB;
+            background: rgba(37, 99, 235, 0.1);
+        }
+        .signature-heo.selected {
+            background: rgba(37, 99, 235, 0.2);
+        }
+
+        .signature-park {
+            color: #059669;
+            background: rgba(5, 150, 105, 0.1);
+        }
+        .signature-park.selected {
+            background: rgba(5, 150, 105, 0.2);
+        }
+
+        .signature-lee {
+            color: #7C3AED;
+            background: rgba(124, 58, 237, 0.1);
+        }
+        .signature-lee.selected {
+            background: rgba(124, 58, 237, 0.2);
+        }
+
+        .signature-hong {
+            color: #EA580C;
+            background: rgba(234, 88, 12, 0.1);
+        }
+        .signature-hong.selected {
+            background: rgba(234, 88, 12, 0.2);
+        }
+
+        .event-chip {
+            position: relative;
+            margin: 2px 0;
+        }
+
+        .event-chip.continued::before {
+            content: '';
+            position: absolute;
+            left: -8px;
+            width: 8px;
+            height: 100%;
+            background: inherit;
+        }
+
+        .event-chip.continues::after {
+            content: '';
+            position: absolute;
+            right: -8px;
+            width: 8px;
+            height: 100%;
+            background: inherit;
+        }
+
+        .event-detail-panel {
+            background: white;
+            border-left: 1px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+
+        /* 스크롤바 스타일링 */
+        .calendar-day::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .calendar-day::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .calendar-day::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 2px;
+        }
+
+        /* 담당자 필터 스타일 */
+        .assignee-filter {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            background: #f8fafc;
+            border-radius: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .assignee-filter-option {
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.875rem;
+        }
+
+        .assignee-filter-option.active {
+            color: white;
+        }
+
+        .event-chip .title {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 150px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen py-8">
+    <div class="banner animate__animated animate__fadeIn">
+        <div class="banner-content">
+            <div class="banner-logo">BMC CORE</div>
+            <div class="banner-divider"></div>
+            <div class="banner-text">일정 관리 시스템</div>
+        </div>
+    </div>
+    <div class="container mx-auto px-4">
+        <div class="calendar-container max-w-6xl mx-auto bg-white p-6 animate__animated animate__fadeIn">
+            <div class="flex">
+                <div class="flex-grow">
+                    <!-- 캘린더 헤더 -->
+                    <div class="calendar-header p-6 mb-6 text-white">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center space-x-4">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <div class="flex items-center space-x-4">
+                                    <button onclick="previousMonth()" class="hover:bg-indigo-600 p-1 rounded">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                        </svg>
+                                    </button>
+                                    <div>
+                                        <h1 class="text-2xl font-bold">팀 캘린더</h1>
+                                        <div class="flex items-center space-x-2">
+                                            <select id="yearSelect" class="bg-transparent border-b border-indigo-200 focus:outline-none">
+                                            </select>
+                                            <select id="monthSelect" class="bg-transparent border-b border-indigo-200 focus:outline-none">
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <button onclick="nextMonth()" class="hover:bg-indigo-600 p-1 rounded">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <button onclick="showAddEventModal()" class="custom-button px-6 py-2 rounded-lg text-white hover:bg-indigo-700 flex items-center space-x-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                                <span>새 일정</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 캘린더 그리드 -->
+                    <div class="grid grid-cols-7 gap-4 mb-6">
+                        <!-- 요일 헤더 -->
+                        <template id="weekdays">
+                            <div class="text-center font-semibold text-gray-600 py-2"></div>
+                        </template>
+
+                        <!-- 날짜 셀 -->
+                        <template id="dateCell">
+                            <div class="calendar-day p-2 rounded-lg">
+                                <div class="font-semibold text-gray-700 mb-2"></div>
+                                <div class="space-y-1 events-container"></div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- 이벤트 상세 정보 사이드패널 -->
+                <div id="eventDetailPanel" class="hidden w-80 ml-6 border-l pl-6">
+                    <div class="sticky top-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold text-gray-900">일정 상세</h3>
+                            <button onclick="closeDetailPanel()" class="text-gray-500 hover:text-gray-700">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="eventDetail" class="space-y-4">
+                            <div>
+                                <h4 id="detailTitle" class="text-xl font-bold text-gray-900 mb-2"></h4>
+                                <div class="flex items-center space-x-2">
+                                    <span id="detailDate" class="text-sm text-gray-600"></span>
+                                    <span id="detailStatus" class="text-sm px-2 py-1 rounded-full"></span>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span id="detailAssignee" class="text-sm font-semibold"></span>
+                            </div>
+                            <div>
+                                <p id="detailDescription" class="text-gray-700"></p>
+                            </div>
+                            <div class="flex space-x-2 mt-4">
+                                <button onclick="editEvent()" class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
+                                    수정
+                                </button>
+                                <button onclick="deleteEvent()" class="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">
+                                    삭제
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 이벤트 추가/수정 모달 -->
+    <div id="eventModal" class="modal fixed inset-0 hidden flex items-center justify-center z-50" onclick="handleModalClick(event)">
+        <div class="modal-content bg-white rounded-2xl p-6 w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-900">새 일정 추가</h3>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form id="eventForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">제목</label>
+                    <input type="text" id="eventTitle" class="custom-input w-full p-3 rounded-lg" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">시작일</label>
+                        <input type="date" id="eventStartDate" class="custom-input w-full p-3 rounded-lg" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">종료일</label>
+                        <input type="date" id="eventEndDate" class="custom-input w-full p-3 rounded-lg" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">프로젝트</label>
+                    <select id="notionProject" class="custom-input w-full p-3 rounded-lg">
+                        <option value="">프로젝트 선택</option>
+                        <!-- Notion DB에서 가져온 프로젝트 목록이 여기에 추가됨 -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">상태</label>
+                    <select id="eventStatus" class="custom-input w-full p-3 rounded-lg">
+                        <option value="진행중">진행중</option>
+                        <option value="예정">예정</option>
+                        <option value="완료">완료</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">설명</label>
+                    <textarea id="eventDescription" class="custom-input w-full p-3 rounded-lg" rows="3"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">담당자</label>
+                    <div class="signature-select">
+                        <label class="signature-option signature-shim">
+                            <input type="radio" name="signature" value="Shim" required>
+                            Shim
+                        </label>
+                        <label class="signature-option signature-heo">
+                            <input type="radio" name="signature" value="Heo">
+                            Heo
+                        </label>
+                        <label class="signature-option signature-park">
+                            <input type="radio" name="signature" value="Park">
+                            Park
+                        </label>
+                        <label class="signature-option signature-lee">
+                            <input type="radio" name="signature" value="Lee">
+                            Lee
+                        </label>
+                        <label class="signature-option signature-hong">
+                            <input type="radio" name="signature" value="Hong">
+                            Hong
+                        </label>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                        취소
+                    </button>
+                    <button type="submit" class="custom-button px-4 py-2 text-white rounded-lg">
+                        저장
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 담당자 필터 -->
+    <div class="assignee-filter">
+        <div class="assignee-filter-option active" data-assignee="all" 
+             style="background-color: #6B7280; color: white;">
+            전체
+        </div>
+        <div class="assignee-filter-option" data-assignee="Shim" 
+             style="background-color: rgba(220, 38, 38, 0.1); color: #DC2626;">
+            Shim
+        </div>
+        <div class="assignee-filter-option" data-assignee="Heo"
+             style="background-color: rgba(37, 99, 235, 0.1); color: #2563EB;">
+            Heo
+        </div>
+        <div class="assignee-filter-option" data-assignee="Park"
+             style="background-color: rgba(5, 150, 105, 0.1); color: #059669;">
+            Park
+        </div>
+        <div class="assignee-filter-option" data-assignee="Lee"
+             style="background-color: rgba(124, 58, 237, 0.1); color: #7C3AED;">
+            Lee
+        </div>
+        <div class="assignee-filter-option" data-assignee="Hong"
+             style="background-color: rgba(234, 88, 12, 0.1); color: #EA580C;">
+            Hong
+        </div>
+    </div>
+
+    <script>
+        let currentDate = new Date();
+        
+        // 연도와 월 선택 초기화
+        function initializeYearMonthSelects() {
+            const yearSelect = document.getElementById('yearSelect');
+            const monthSelect = document.getElementById('monthSelect');
+            
+            // 현재 년도 기준 전후 10년
+            const currentYear = currentDate.getFullYear();
+            for (let year = currentYear - 10; year <= currentYear + 10; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year + '년';
+                if (year === currentYear) option.selected = true;
+                yearSelect.appendChild(option);
+            }
+            
+            // 월 선택 옵션
+            for (let month = 1; month <= 12; month++) {
+                const option = document.createElement('option');
+                option.value = month;
+                option.textContent = month + '월';
+                if (month === currentDate.getMonth() + 1) option.selected = true;
+                monthSelect.appendChild(option);
+            }
+            
+            // 이벤트 리스너 추가
+            yearSelect.addEventListener('change', updateCalendar);
+            monthSelect.addEventListener('change', updateCalendar);
+        }
+
+        // 캘린더 업데이트
+        function updateCalendar() {
+            const year = parseInt(document.getElementById('yearSelect').value);
+            const month = parseInt(document.getElementById('monthSelect').value) - 1;
+            currentDate = new Date(year, month, 1);
+            
+            const weekdaysContainer = document.querySelector('.grid');
+            weekdaysContainer.innerHTML = ''; // 기존 캘린더 내용 삭제
+            
+            // 요일 헤더 추가
+            const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+            weekdays.forEach(day => {
+                const div = document.createElement('div');
+                div.className = 'text-center font-semibold text-gray-600 py-2';
+                div.textContent = day;
+                weekdaysContainer.appendChild(div);
+            });
+
+            // 이전 달의 마지막 날짜들 추가
+            const firstDay = new Date(year, month, 1).getDay();
+            const prevMonthDays = new Date(year, month, 0).getDate();
+            
+            // 이전 달의 날짜 추가
+            for (let i = 0; i < firstDay; i++) {
+                const day = prevMonthDays - firstDay + i + 1;
+                addDateCell(day, true);
+            }
+
+            // 현재 달의 날짜들 추가
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            for (let day = 1; day <= daysInMonth; day++) {
+                addDateCell(day, false);
+            }
+
+            // 다음 달의 날짜 추가 (필요한 경우)
+            const lastDay = new Date(year, month, daysInMonth).getDay();
+            for (let i = lastDay + 1; i < 7; i++) {
+                addDateCell(i - lastDay, true, true);
+            }
+
+            // 이벤트 로드
+            loadEvents();
+        }
+
+        // 날짜 셀 추가
+        function addDateCell(day, isPrevMonth, isNextMonth = false) {
+            const weekdaysContainer = document.querySelector('.grid');
+            const cell = document.createElement('div');
+            cell.className = `calendar-day p-2 rounded-lg ${isPrevMonth || isNextMonth ? 'text-gray-400' : ''}`;
+            
+            const dateDiv = document.createElement('div');
+            dateDiv.className = 'font-semibold text-gray-700 mb-2';
+            dateDiv.textContent = day;
+            
+            const eventsContainer = document.createElement('div');
+            eventsContainer.className = 'space-y-1 events-container';
+            
+            cell.appendChild(dateDiv);
+            cell.appendChild(eventsContainer);
+            
+            // 날짜 클릭 이벤트
+            cell.addEventListener('click', () => {
+                if (!isPrevMonth && !isNextMonth) {
+                    showAddEventModal(new Date(currentDate.getFullYear(), currentDate.getMonth(), day));
+                }
+            });
+            
+            weekdaysContainer.appendChild(cell);
+        }
+
+        // 이전 달로 이동
+        function previousMonth() {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            document.getElementById('monthSelect').value = currentDate.getMonth() + 1;
+            document.getElementById('yearSelect').value = currentDate.getFullYear();
+            updateCalendar();
+        }
+
+        // 다음 달로 이동
+        function nextMonth() {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            document.getElementById('monthSelect').value = currentDate.getMonth() + 1;
+            document.getElementById('yearSelect').value = currentDate.getFullYear();
+            updateCalendar();
+        }
+
+        // 이벤트 모달 표시
+        function showAddEventModal(date = null) {
+            if (date) {
+                const formattedDate = date.toISOString().split('T')[0];
+                document.getElementById('eventStartDate').value = formattedDate;
+                document.getElementById('eventEndDate').value = formattedDate;
+            }
+            document.getElementById('eventModal').classList.remove('hidden');
+            document.getElementById('eventModal').classList.add('show');
+        }
+
+        // 모달 클릭 핸들러 추가
+        function handleModalClick(event) {
+            if (event.target.id === 'eventModal') {
+                closeModal();
+            }
+        }
+
+        // 모달 닫기 함수 수정
+        function closeModal() {
+            const modal = document.getElementById('eventModal');
+            modal.classList.remove('show');
+            modal.classList.add('hidden');
+            
+            // 폼 초기화
+            document.getElementById('eventForm').reset();
+            // 서명 선택 초기화
+            document.querySelectorAll('.signature-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+        }
+
+        // ESC 키로 모달 닫기 추가
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeYearMonthSelects();
+            updateCalendar();
+        });
+
+        // 서명 선택 효과
+        document.querySelectorAll('.signature-option').forEach(option => {
+            option.addEventListener('click', function() {
+                // 이전 선택 제거
+                document.querySelectorAll('.signature-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                // 현재 선택 추가
+                this.classList.add('selected');
+            });
+        });
+
+        // 이벤트 폼 제출 처리 수정
+        document.getElementById('eventForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                title: document.getElementById('eventTitle').value,
+                start_date: document.getElementById('eventStartDate').value + 'T00:00:00',
+                end_date: document.getElementById('eventEndDate').value + 'T23:59:59',
+                description: document.getElementById('eventDescription').value,
+                status: document.getElementById('eventStatus').value,
+                assignee: document.querySelector('input[name="signature"]:checked').value,
+                project: document.getElementById('notionProject').value
+            };
+
+            try {
+                const response = await fetch('/api/events', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Event creation failed');
+                }
+
+                const result = await response.json();
+                console.log('저장된 이벤트:', result);
+                
+                await loadEvents();
+                closeModal();
+            } catch (error) {
+                console.error('이벤트 저장 실패:', error);
+                alert('일정 저장에 실패했습니다.');
+            }
+        });
+
+        // 이벤트 로드 함수 추가
+        async function loadEvents() {
+            try {
+                const response = await fetch('/api/events');
+                currentEvents = await response.json();
+                
+                // 기존 이벤트 제거
+                document.querySelectorAll('.events-container').forEach(container => {
+                    container.innerHTML = '';
+                });
+                
+                // 필터링된 이벤트 추가
+                const filteredEvents = currentFilter === 'all' 
+                    ? currentEvents 
+                    : currentEvents.filter(event => event.assignee === currentFilter);
+                
+                filteredEvents.forEach(event => {
+                    const startDate = new Date(event.start_date);
+                    const endDate = new Date(event.end_date);
+                    
+                    let iterDate = new Date(startDate);
+                    while (iterDate <= endDate) {
+                        if (iterDate.getMonth() === currentDate.getMonth() && 
+                            iterDate.getFullYear() === currentDate.getFullYear()) {
+                            // 날짜 셀 인덱스 계산 수정
+                            const cellIndex = iterDate.getDate() + 
+                                new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay() + 7;
+                            const cell = document.querySelector(`.calendar-day:nth-child(${cellIndex})`);
+                            
+                            if (cell) {
+                                const eventsContainer = cell.querySelector('.events-container');
+                                const eventElement = createEventElement({
+                                    ...event,
+                                    currentDate: new Date(iterDate)
+                                });
+                                eventsContainer.appendChild(eventElement);
+                            }
+                        }
+                        iterDate.setDate(iterDate.getDate() + 1);
+                    }
+                });
+            } catch (error) {
+                console.error('이벤트 로드 실패:', error);
+            }
+        }
+
+        // 이벤트 요소 생성 함수
+        function createEventElement(event) {
+            const eventDiv = document.createElement('div');
+            eventDiv.className = `event-chip px-2 py-1 text-sm mb-1 flex items-center justify-between`;
+            eventDiv.setAttribute('data-assignee', event.assignee);
+            
+            // 연속된 일정 표시
+            const startDate = new Date(event.start_date);
+            const endDate = new Date(event.end_date);
+            const currentIterDate = event.currentDate;
+            
+            if (startDate.getDate() !== endDate.getDate()) {
+                if (currentIterDate.getDate() === startDate.getDate()) {
+                    eventDiv.classList.add('continues');
+                } else if (currentIterDate.getDate() === endDate.getDate()) {
+                    eventDiv.classList.add('continued');
+                } else if (currentIterDate > startDate && currentIterDate < endDate) {
+                    eventDiv.classList.add('continued', 'continues');
+                }
+            }
+            
+            const title = document.createElement('span');
+            title.textContent = event.title;
+            title.className = 'font-medium title';
+            
+            const assignee = document.createElement('span');
+            assignee.className = 'status-badge flex-shrink-0';
+            assignee.textContent = event.assignee;
+            
+            eventDiv.appendChild(title);
+            eventDiv.appendChild(assignee);
+            
+            // 이벤트 클릭 시 상세 정보 표시
+            eventDiv.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showEventDetail(event);
+            });
+            
+            return eventDiv;
+        }
+
+        // 담당자별 색상 반환 함수
+        function getAssigneeColor(assignee) {
+            const colors = {
+                'Shim': '#DC2626',
+                'Heo': '#2563EB',
+                'Park': '#059669',
+                'Lee': '#7C3AED',
+                'Hong': '#EA580C'
+            };
+            return colors[assignee] || '#6B7280';
+        }
+
+        let currentEventId = null;
+
+        // 이벤트 상세 정보 표시
+        function showEventDetail(event) {
+            currentEventId = event.id;
+            const panel = document.getElementById('eventDetailPanel');
+            
+            document.getElementById('detailTitle').textContent = event.title;
+            document.getElementById('detailDate').textContent = `${formatDate(event.start_date)} - ${formatDate(event.end_date)}`;
+            document.getElementById('detailStatus').textContent = event.status;
+            document.getElementById('detailStatus').className = `status-badge status-${event.status === '진행중' ? 'ongoing' : event.status === '예정' ? 'planned' : 'completed'}`;
+            document.getElementById('detailAssignee').textContent = event.assignee;
+            document.getElementById('detailAssignee').style.color = getAssigneeColor(event.assignee);
+            document.getElementById('detailDescription').textContent = event.description || '설명 없음';
+            
+            panel.classList.remove('hidden');
+        }
+
+        // 상세 패널 닫기
+        function closeDetailPanel() {
+            document.getElementById('eventDetailPanel').classList.add('hidden');
+            currentEventId = null;
+        }
+
+        // 이벤트 수정
+        async function editEvent() {
+            const event = currentEvents.find(e => e.id === currentEventId);
+            if (!event) return;
+
+            // 기존 데이터로 폼 채우기
+            document.getElementById('eventTitle').value = event.title;
+            const startDate = new Date(event.start_date);
+            const endDate = new Date(event.end_date);
+            document.getElementById('eventStartDate').value = formatDateForInput(startDate);
+            document.getElementById('eventEndDate').value = formatDateForInput(endDate);
+            document.getElementById('eventDescription').value = event.description || '';
+            document.getElementById('eventStatus').value = event.status;
+            document.querySelector(`input[name="signature"][value="${event.assignee}"]`).checked = true;
+            document.querySelector(`input[name="signature"][value="${event.assignee}"]`).parentElement.classList.add('selected');
+            document.getElementById('notionProject').value = event.project || '';
+
+            // 폼 제출 핸들러 수정
+            const form = document.getElementById('eventForm');
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                
+                const formData = {
+                    title: document.getElementById('eventTitle').value,
+                    start_date: document.getElementById('eventStartDate').value + 'T00:00:00',
+                    end_date: document.getElementById('eventEndDate').value + 'T23:59:59',
+                    description: document.getElementById('eventDescription').value,
+                    status: document.getElementById('eventStatus').value,
+                    assignee: document.querySelector('input[name="signature"]:checked').value,
+                    project: document.getElementById('notionProject').value
+                };
+
+                try {
+                    const response = await fetch(`/api/events/${currentEventId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    if (!response.ok) throw new Error('Event update failed');
+
+                    await loadEvents();
+                    closeModal();
+                    
+                    // 폼 제출 핸들러 초기화
+                    form.onsubmit = null;
+                } catch (error) {
+                    console.error('이벤트 수정 실패:', error);
+                    alert('일정 수정에 실패했습니다.');
+                }
+            };
+
+            showAddEventModal();
+            closeDetailPanel();
+        }
+
+        // 날짜를 input type="date"에 맞는 형식으로 변환하는 함수 추가
+        function formatDateForInput(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // 이벤트 삭제
+        async function deleteEvent() {
+            if (!currentEventId || !confirm('이 일정을 삭제하시겠습니까?')) return;
+
+            try {
+                const response = await fetch(`/api/events/${currentEventId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Failed to delete event');
+
+                closeDetailPanel();
+                await loadEvents();
+            } catch (error) {
+                console.error('이벤트 삭제 실패:', error);
+                alert('일정 삭제에 실패했습니다.');
+            }
+        }
+
+        // 날짜 포맷 함수
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('ko-KR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+        // 전역 이벤트 저장소 추가
+        let currentEvents = [];
+
+        let currentFilter = 'all';  // 현재 선택된 필터
+
+        // 담당자 필터 이벤트 리스너 추가
+        document.querySelectorAll('.assignee-filter-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.assignee-filter-option').forEach(opt => {
+                    opt.classList.remove('active');
+                    if (opt.dataset.assignee !== 'all') {
+                        opt.style.color = getAssigneeColor(opt.dataset.assignee);
+                        opt.style.backgroundColor = `${getAssigneeColor(opt.dataset.assignee)}1A`;
+                    }
+                });
+                
+                this.classList.add('active');
+                if (this.dataset.assignee !== 'all') {
+                    this.style.backgroundColor = getAssigneeColor(this.dataset.assignee);
+                    this.style.color = 'white';
+                }
+                
+                currentFilter = this.dataset.assignee;
+                loadEvents();
+            });
+        });
+    </script>
+</body>
+</html>
